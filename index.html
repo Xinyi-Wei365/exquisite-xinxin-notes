@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f8f1ea">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https://*.supabase.co; media-src 'self' blob: https://*.supabase.co; frame-src 'self' blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co; base-uri 'none'; form-action 'self'; object-src 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>Mori Notes · 我的学习手记</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="opening" id="opening" aria-hidden="true">
+    <div class="opening-glow"></div>
+    <div class="opening-copy">
+      <span class="opening-flower">✿</span>
+      <p>Welcome to my little study corner.</p>
+      <h1>Exquisite_xinxin</h1>
+      <i></i>
+    </div>
+    <div class="opening-paper opening-paper-left"></div>
+    <div class="opening-paper opening-paper-right"></div>
+  </div>
+  <div class="grain" aria-hidden="true"></div>
+  <section class="auth-gate" id="authGate" hidden>
+    <div class="auth-card"><span class="auth-flower">✿</span><p class="eyebrow">PRIVATE NOTE SPACE</p><h1>欢迎回来</h1><p>请输入受邀邮箱，我们会发送一次性安全登录链接。</p><form id="loginForm"><input id="loginEmail" type="email" autocomplete="email" placeholder="name@example.com" required><button class="primary">发送登录链接</button></form><small id="loginStatus">仅受邀用户可以进入</small></div>
+  </section>
+  <button class="mobile-menu" id="mobileMenu" aria-label="打开导航" aria-expanded="false">☰</button>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><span class="brand-mark">m</span><span>Mori Notes</span></div>
+    <section class="profile">
+      <div class="avatar" aria-hidden="true">🌷</div>
+      <div><strong>Exquisite_xinxin</strong><p>慢慢学，也会闪闪发光。</p></div>
+    </section>
+    <nav aria-label="主导航">
+      <button class="nav-item active" data-view="all"><span>⌂</span>学习主页</button>
+      <button class="nav-item" data-view="favorites"><span>♡</span>我的收藏</button>
+      <button class="nav-item" id="focusImport"><span>＋</span>导入手记</button>
+      <button class="nav-item admin-only" id="openSettings"><span>⚙</span>安全设置</button>
+      <button class="nav-item" id="logoutButton"><span>↪</span>退出登录</button>
+    </nav>
+    <div class="sidebar-note">
+      <span class="tape"></span>
+      <small>today's note</small>
+      <p>把今天学到的一点点，变成明天的底气。</p>
+      <span class="doodle">✿</span>
+    </div>
+    <div class="privacy"><span>⌁</span><div><strong>本地私密空间</strong><small>笔记不会上传网络</small></div></div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div><p class="eyebrow" id="todayText"></p><h1 id="greeting">你好，Exquisite_xinxin</h1></div>
+      <div class="top-actions">
+        <label class="search"><span>⌕</span><input id="searchInput" type="search" placeholder="搜索标题、标签或内容…"></label>
+        <button class="round-btn" id="themeButton" aria-label="切换氛围">☀</button>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-copy">
+        <span class="pill">MY STUDY CORNER</span>
+        <h2>今天也收集<br><em>一小片知识</em>吧。</h2>
+        <p>整理灵感、复习笔记，也记录每一个认真生活的瞬间。</p>
+        <div class="hero-actions"><button class="primary" id="heroImport">＋ 导入新手记</button><button class="text-btn" id="scrollNotes">看看笔记 ↓</button></div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="sun"></div><div class="paper paper-back"></div><div class="paper paper-front"><span>little steps</span><b>make big<br>dreams.</b><i>♡</i></div>
+        <div class="flower">✿</div><div class="sparkle">✦</div>
+      </div>
+    </section>
+
+    <section class="stats" aria-label="空间统计">
+      <article><span class="stat-icon pink">✎</span><div><small>全部手记</small><strong id="statTotal">0</strong></div><span class="trend">持续积累</span></article>
+      <article><span class="stat-icon sage">⌁</span><div><small>研习间</small><strong id="statStudy">0</strong></div><span class="trend">份</span></article>
+      <article><span class="stat-icon gold">◇</span><div><small>拾光集</small><strong id="statMemory">0</strong></div><span class="trend">份</span></article>
+      <article><span class="stat-icon cocoa">♡</span><div><small>日常里</small><strong id="statLife">0</strong></div><span class="trend">份</span></article>
+    </section>
+
+    <section class="spaces-section" id="spacesSection">
+      <div class="spaces-heading"><div><p class="eyebrow">THREE LITTLE WORLDS</p><h2>选择一处，安放此刻</h2></div><button id="showAllSpaces" class="space-back" hidden>← 返回全部空间</button></div>
+      <div class="space-grid" id="spaceGrid">
+        <button class="space-card study-space" data-space="study">
+          <span class="space-scene"><i class="scene-book"></i><i class="scene-cup"></i><i class="scene-leaf"></i></span>
+          <span class="space-shade"></span><span class="space-index">01 / STUDY</span>
+          <span class="space-copy"><small>让思考慢慢生长</small><strong>研习间</strong><em><b id="spaceStudyCount">0</b> 份手记　进入 →</em></span>
+        </button>
+        <button class="space-card memory-space" data-space="memory">
+          <span class="space-scene"><i class="scene-books"></i><i class="scene-letter"></i><i class="scene-flower"></i></span>
+          <span class="space-shade"></span><span class="space-index">02 / MEMORY</span>
+          <span class="space-copy"><small>收藏文字与时间的微光</small><strong>拾光集</strong><em><b id="spaceMemoryCount">0</b> 份手记　进入 →</em></span>
+        </button>
+        <button class="space-card life-space" data-space="life">
+          <span class="space-scene"><i class="scene-window"></i><i class="scene-coffee"></i><i class="scene-plant"></i></span>
+          <span class="space-shade"></span><span class="space-index">03 / LIFE</span>
+          <span class="space-copy"><small>记录寻常日子的温柔</small><strong>日常里</strong><em><b id="spaceLifeCount">0</b> 份手记　进入 →</em></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="import-zone" id="importZone" tabindex="0" aria-label="拖拽文件导入区域">
+      <input type="file" id="fileInput" accept=".pdf,.png,.jpg,.jpeg,.webp,.mp4,.webm,.txt,.md,.markdown" multiple hidden>
+      <div class="import-icon">⇧</div>
+      <div><h3>把“手记”拖到这里</h3><p>支持 PDF、图片、MP4/WebM 视频、TXT 与 Markdown · 免费测试版单个文件最大 100MB</p></div>
+      <button class="secondary" id="chooseFiles">选择文件</button>
+    </section>
+
+    <section class="notes-section" id="notesSection">
+      <div class="notes-heading">
+        <div><p class="eyebrow">MY LIBRARY</p><h2>最近的手记 <span id="noteCount">0</span></h2></div>
+        <div class="library-actions">
+          <div class="filters" id="filters"><button class="active" data-filter="all">全部</button><button data-filter="语言">语言</button><button data-filter="编程">编程</button><button data-filter="阅读">阅读</button><button data-filter="灵感">灵感</button></div>
+          <select id="sortSelect" aria-label="排序"><option value="newest">最近导入</option><option value="oldest">最早导入</option><option value="title">标题排序</option></select>
+        </div>
+      </div>
+      <div class="notes-grid" id="notesGrid"></div>
+      <div class="empty-state" id="emptyState" hidden><span>☁</span><h3>这里还没有匹配的手记</h3><p>换个关键词，或导入一份新的学习记录吧。</p></div>
+    </section>
+  </main>
+
+  <dialog class="reader" id="readerDialog">
+    <div class="reader-shell">
+      <header><div><span id="readerType"></span><h2 id="readerTitle"></h2><p id="readerMeta"></p></div><div class="reader-actions"><button id="editNote">编辑</button><button id="readerFav" aria-label="收藏">♡</button><button id="closeReader" aria-label="关闭">×</button></div></header>
+      <div class="reader-progress"><i id="readerProgressBar"></i></div>
+      <article class="reader-content" id="readerContent"></article>
+    </div>
+  </dialog>
+
+  <dialog class="editor" id="editorDialog">
+    <form method="dialog" id="editorForm">
+      <div class="modal-title"><div><small>EDIT NOTE</small><h2>整理这份手记</h2></div><button value="cancel" aria-label="关闭">×</button></div>
+      <label>标题<input id="editTitle" maxlength="80" required></label>
+      <label>分类<select id="editCategory"><option>语言</option><option>编程</option><option>阅读</option><option>灵感</option><option>其他</option></select></label>
+      <label>所属空间<select id="editSpace"><option value="study">研习间</option><option value="memory">拾光集</option><option value="life">日常里</option></select></label>
+      <label>记录日期<input id="editRecordDate" type="date"></label>
+      <label>标签（用逗号分隔）<input id="editTags" maxlength="120"></label>
+      <label>简介<textarea id="editSummary" rows="4" maxlength="240"></textarea></label>
+      <div class="form-actions"><button value="cancel" class="ghost">取消</button><button value="default" id="saveEdit" class="primary">保存修改</button></div>
+    </form>
+  </dialog>
+
+  <dialog class="space-picker" id="spacePickerDialog">
+    <div class="space-picker-shell">
+      <div class="modal-title"><div><small>CHOOSE A SPACE</small><h2>把这份手记放在哪里？</h2></div></div>
+      <div class="pending-file"><span id="pendingFileIndex"></span><strong id="pendingFileName"></strong><small id="pendingFileType"></small></div>
+      <div class="space-options">
+        <button data-pick-space="study"><b>研习间</b><span>课程、语言与知识整理</span></button>
+        <button data-pick-space="memory"><b>拾光集</b><span>阅读、摘抄与珍贵记忆</span></button>
+        <button data-pick-space="life"><b>日常里</b><span>生活、灵感与旅行片段</span></button>
+      </div>
+      <button class="skip-file" id="skipPendingFile">跳过这份文件</button>
+    </div>
+  </dialog>
+
+  <dialog class="settings" id="settingsDialog">
+    <div class="settings-shell">
+      <div class="modal-title"><div><small>SECURITY & SYNC</small><h2>安全与云端同步</h2></div><button id="closeSettings" aria-label="关闭">×</button></div>
+      <section><h3>受邀访客</h3><form id="inviteForm" class="invite-form"><input id="inviteEmail" type="email" placeholder="访客邮箱" required><button class="primary">添加邀请</button></form><div id="inviteList" class="invite-list"></div></section>
+      <section><h3>本地数据迁移</h3><p id="migrationSummary">正在检查当前浏览器中的本地手记…</p><div class="migration-progress" id="migrationProgress" hidden><i id="migrationBar"></i></div><button class="secondary" id="startMigration">迁移到云端</button><div id="migrationFailures"></div></section>
+      <p class="security-note">媒体通过短时授权地址在线展示。系统不提供下载入口，但无法阻止截图、录屏或高级技术提取。</p>
+    </div>
+  </dialog>
+
+  <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+  <script src="config.js"></script>
+  <script src="cloud.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

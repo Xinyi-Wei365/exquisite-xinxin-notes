@@ -1,0 +1,11 @@
+.dev.vars
+.wrangler/
+node_modules/
+config.js
+cloudflare-backup/
+.dev.vars.example
+/functions/
+wrangler.toml
+_headers
+r2-cors.json
+.assetsignore
