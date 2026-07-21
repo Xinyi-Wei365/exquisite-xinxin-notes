@@ -156,6 +156,10 @@
   <dialog class="settings" id="settingsDialog">
     <div class="settings-shell">
       <div class="modal-title"><div><small>SECURITY & SYNC</small><h2>安全与云端同步</h2></div><button id="closeSettings" aria-label="关闭">×</button></div>
+      <section class="account-card" aria-labelledby="accountHeading">
+        <div><small>CURRENT ACCOUNT</small><h3 id="accountHeading">当前账号</h3></div>
+        <dl><div><dt>邮箱</dt><dd id="accountEmail">—</dd></div><div><dt>角色</dt><dd id="accountRole">—</dd></div></dl>
+      </section>
       <section><h3>受邀访客</h3><form id="inviteForm" class="invite-form"><input id="inviteEmail" type="email" placeholder="访客邮箱" required><button class="primary">添加邀请</button></form><div id="inviteList" class="invite-list"></div></section>
       <section><h3>本地数据迁移</h3><p id="migrationSummary">正在检查当前浏览器中的本地手记…</p><div class="migration-progress" id="migrationProgress" hidden><i id="migrationBar"></i></div><button class="secondary" id="startMigration">迁移到云端</button><div id="migrationFailures"></div></section>
       <p class="security-note">媒体通过短时授权地址在线展示。系统不提供下载入口，但无法阻止截图、录屏或高级技术提取。</p>

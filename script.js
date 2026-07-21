@@ -149,7 +149,14 @@ async function openReader(id){
   else content.innerHTML=`<pre>${escapeHtml(currentNote.content||currentNote.summary)}</pre>`;
   $("#readerDialog").showModal();
 }
-async function openSettings(){if(!CloudApp.isAdmin)return;$("#settingsDialog").showModal();await Promise.all([renderInvites(),inspectMigration()])}
+async function openSettings(){
+  if(!CloudApp.isAdmin)return;
+  const account=CloudApp.user;
+  $("#accountEmail").textContent=account?.email||"未知邮箱";
+  $("#accountRole").textContent=account?.role==="admin"?"管理员":"访客";
+  $("#settingsDialog").showModal();
+  await Promise.all([renderInvites(),inspectMigration()]);
+}
 async function renderInvites(){try{const rows=await CloudApp.listInvites();$("#inviteList").innerHTML=rows.map(row=>`<div class="invite-row"><span><b>${escapeHtml(row.email)}</b><small>${row.role} · ${row.status}</small></span>${row.role==="admin"?"":`<button data-revoke="${escapeHtml(row.email)}">撤销</button>`}</div>`).join("");$$('[data-revoke]').forEach(btn=>btn.onclick=async()=>{await CloudApp.revoke(btn.dataset.revoke);renderInvites()})}catch(error){toast(error.message)}}
 async function inviteViewer(e){e.preventDefault();try{await CloudApp.invite($("#inviteEmail").value.trim());$("#inviteEmail").value="";await renderInvites();toast("访客已加入邀请名单")}catch(error){toast(error.message)}}
 async function readLocalNotes(){if(!db)await openDB();return storeAction("get")}
