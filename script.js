@@ -76,6 +76,9 @@ function bindEvents(){
   $("#mobileMenu").onclick=()=>{const open=$("#sidebar").classList.toggle("open");$("#mobileMenu").setAttribute("aria-expanded",open)};$("#themeButton").onclick=()=>{document.body.classList.toggle("dim");$("#themeButton").textContent=document.body.classList.contains("dim")?"☾":"☀"};
   window.addEventListener("beforeunload",()=>objectUrls.forEach(URL.revokeObjectURL));
 }
+
+  $("#notesGrid").addEventListener("change",e=>{const inp=e.target.closest(".photo-date-input");if(!inp)return;e.stopPropagation();const id=inp.dataset.id;const note=notes.find(n=>n.id===id);if(note){note.recordDate=inp.value;persist(note,false);renderNotes();toast("拍摄日期已更新")}});
+  $("#notesGrid").addEventListener("click",e=>{const inp=e.target.closest(".photo-date-input");if(inp)return;const card=e.target.closest(".photo-item");if(card&&!e.target.closest("button"))openReader(card.dataset.id)});
 function closeMobile(){$("#sidebar").classList.remove("open");$("#mobileMenu").setAttribute("aria-expanded","false")}
 
 async function handleFiles(files){
@@ -106,7 +109,7 @@ function animateNumber(el,target){const start=Number(el.textContent)||0;let fram
 function renderSpaceCounts(){for(const [space,label] of [["study","Study"],["memory","Memory"],["life","Life"]]){$(`#space${label}Count`).textContent=notes.filter(n=>n.space===space).length}}
 function enterSpace(space){if(activeSpace===space)return;activeSpace=space;const grid=$("#spaceGrid");grid.classList.add("switching");setTimeout(()=>{grid.classList.toggle("focused",space!=="all");$$('.space-card').forEach(c=>c.classList.toggle("selected",c.dataset.space===space));$("#showAllSpaces").hidden=space==="all";const names={study:"研习间",memory:"拾光集",life:"日常里"};$(".notes-heading h2").firstChild.textContent=space==="all"?"最近的手记 ":`${names[space]}的手记 `;renderNotes();grid.classList.remove("switching");if(space!=="all")$("#notesSection").scrollIntoView({behavior:"smooth",block:"start"})},220)}
 
-function handleCardAction(e){const card=e.target.closest(".note-card")||e.target.closest(".gallery-item");if(!card)return;const action=e.target.closest("button")?.dataset.action;if(action==="favorite"){e.stopPropagation();toggleFavorite(card.dataset.id);return}if(action==="delete"){e.stopPropagation();deleteNote(card.dataset.id);return}openReader(card.dataset.id)}
+function handleCardAction(e){const card=e.target.closest(".note-card")||e.target.closest(".photo-item");if(!card)return;const action=e.target.closest("button")?.dataset.action;if(action==="favorite"){e.stopPropagation();toggleFavorite(card.dataset.id);return}if(action==="delete"){e.stopPropagation();deleteNote(card.dataset.id);return}openReader(card.dataset.id)}
 async function toggleFavorite(id,fromReader=false){const note=notes.find(n=>n.id===id);if(!note)return;note.favorite=!note.favorite;await persist(note);if(fromReader)$("#readerFav").textContent=note.favorite?"♥":"♡";toast(note.favorite?"已放进灵感收藏夹":"已取消收藏")}
 async function deleteNote(id){const note=notes.find(n=>n.id===id);if(!note||!confirm(`确定删除「${note.title}」吗？此操作无法撤销。`))return;notes=notes.filter(n=>n.id!==id);if(db)await storeAction("delete",id);renderAll();toast("手记已删除")}
 
@@ -124,7 +127,7 @@ async function saveEditor(e){e.preventDefault();if(!$("#editTitle").value.trim()
 function toast(message){const el=document.createElement("div");el.className="toast";el.textContent=message;$("#toastStack").append(el);setTimeout(()=>el.remove(),3200)}
 
 // Cloud mode overrides keep the original offline experience available for local previews.
-function renderNotes(){const list=filteredNotes();$("#noteCount").textContent=String(list.length).padStart(2,"0");const isMemory=activeSpace==="memory";$("#notesGrid").className='notes-grid'+(isMemory?" gallery-mode":"");$("#notesGrid").innerHTML=isMemory?list.map((n,i)=>timelineItem(n,i)).join(""):list.map((n,i)=>noteCard(n,i)).join("");$("#emptyState").hidden=!!list.length;loadCloudThumbnails()}
+function renderNotes(){const list=filteredNotes();$("#noteCount").textContent=String(list.length).padStart(2,"0");const isMemory=activeSpace==="memory";$("#notesGrid").className='notes-grid'+(isMemory?" photo-album":"");$("#notesGrid").innerHTML=isMemory?list.map((n,i)=>timelineItem(n,i)).join(""):list.map((n,i)=>noteCard(n,i)).join("");$("#emptyState").hidden=!!list.length;loadCloudThumbnails()}
 function noteCard(n,i){
   let cover;
   if(n.type==="图片"&&n.fileBlob){const url=URL.createObjectURL(n.fileBlob);objectUrls.add(url);cover=`<div class="note-cover image"><img src="${url}" alt="${escapeHtml(n.title)} 的预览"></div>`}
@@ -139,21 +142,16 @@ function noteCard(n,i){
 }
 async function loadCloudThumbnails(){if(!cloudMode)return;for(const el of $$('[data-cloud-image]')){try{const url=await CloudApp.mediaUrl(el.dataset.cloudImage);el.innerHTML=`<img src="${url}" alt="云端照片" draggable="false">`}catch{el.textContent="照片暂时无法载入"}}
 function timelineItem(n,i){
-  let imgSrc;
+  let imgSrc='';
   if(n.type==="图片"&&n.fileBlob){const url=URL.createObjectURL(n.fileBlob);objectUrls.add(url);imgSrc=url}
-  else if(n.type==="视频"&&n.fileBlob){const url=URL.createObjectURL(n.fileBlob);objectUrls.add(url);imgSrc=url}
-  else if(n.cloud&&n.objectKey&&n.type==="图片"){const imgId='tl-img-'+n.id;setTimeout(async()=>{try{const el=document.getElementById(imgId);if(el){const url=await CloudApp.mediaUrl(n.id);el.innerHTML='<img src="'+url+'" alt="'+escapeHtml(n.title)+'" draggable="false" loading="lazy">'}}catch(e){}},200);imgSrc=null}
-  else imgSrc=null;
-  const isVideo=n.type==="视频";
+  else if(n.cloud&&n.objectKey&&n.type==="图片"){const imgId='tl-img-'+n.id;setTimeout(async()=>{try{const el=document.getElementById(imgId);if(el){const url=await CloudApp.mediaUrl(n.id);el.innerHTML='<img src="'+url+'" alt="'+escapeHtml(n.title)+'" draggable="false" loading="lazy">'}}catch(e){}},100);imgSrc=''}
   const dateStr=n.recordDate?displayRecordDate(n.recordDate):formatDate(n.importedAt);
-  const actions=!cloudMode||CloudApp.isAdmin?`<span class="icon-actions"><button data-action="favorite" class="${n.favorite?"faved":""}" aria-label="收藏">${n.favorite?"♥":"♡"}</button><button data-action="delete" aria-label="删除">⌫</button></span>`:"";
-  let mediaHtml;
-  if(imgSrc&&isVideo)mediaHtml=`<video src="${imgSrc}" muted preload="metadata"></video><span class="gallery-play">▶</span>`;
-  else if(imgSrc)mediaHtml=`<img src="${imgSrc}" alt="${escapeHtml(n.title)}" loading="lazy">`;
-  else if(n.cloud&&n.objectKey&&n.type==="图片")mediaHtml=`<span id="tl-img-${n.id}" class="gallery-loading">载入中…</span>`;
-  else if(n.type==="视频")mediaHtml=`<span class="gallery-play">▶</span>`;
-  else mediaHtml=`<span class="gallery-text">${escapeHtml(n.summary||"").slice(0,30)}</span>`;
-  return `<article class="gallery-item" data-id="${n.id}" style="animation-delay:${Math.min(i,8)*45}ms"><div class="gallery-thumb${isVideo?" video-thumb":""}">${mediaHtml}</div><div class="gallery-info"><span class="gallery-date">${dateStr}</span><h4>${escapeHtml(n.title)}</h4>${actions}</div></article>`;
+  const rawDate=n.recordDate||(n.importedAt?inputDate(n.importedAt):'');
+  const actions=!cloudMode||CloudApp.isAdmin?'<span class="icon-actions"><button data-action="favorite" class="'+(n.favorite?"faved":"")+'" aria-label="收藏">'+(n.favorite?"\u2665":"\u2661")+'</button><button data-action="delete" aria-label="删除">\u232b</button></span>':'';
+  if(imgSrc){
+    return '<article class="photo-item" data-id="'+n.id+'" style="animation-delay:'+Math.min(i,8)*60+'ms"><div class="photo-date-row"><span class="photo-dot"></span><input type="date" class="photo-date-input" value="'+rawDate+'" data-id="'+n.id+'" title="点击修改拍摄日期"> <span class="photo-label">'+escapeHtml(n.category)+'</span>'+actions+'</div><div class="photo-card"><div class="photo-frame"><img src="'+imgSrc+'" alt="'+escapeHtml(n.title)+'" loading="lazy"></div><div class="photo-caption"><strong>'+escapeHtml(n.title)+'</strong><span>'+escapeHtml(n.summary||"")+'</span></div></div></article>';
+  }
+  return '<article class="photo-item photo-text" data-id="'+n.id+'" style="animation-delay:'+Math.min(i,8)*60+'ms"><div class="photo-date-row"><span class="photo-dot"></span><input type="date" class="photo-date-input" value="'+rawDate+'" data-id="'+n.id+'" title="点击修改拍摄日期"> <span class="photo-label">'+escapeHtml(n.category)+'</span>'+actions+'</div><div class="photo-card"><div class="photo-caption"><strong>'+escapeHtml(n.title)+'</strong><span>'+escapeHtml(n.summary||"")+'</span></div></div></article>';
 }
 async function deleteNote(id){const note=notes.find(n=>n.id===id);if(!note||!confirm(`确定删除「${note.title}」吗？此操作无法撤销。`))return;try{if(cloudMode)await CloudApp.deleteNote(id);else if(db)await storeAction("delete",id);notes=notes.filter(n=>n.id!==id);renderAll();toast("手记已删除")}catch(error){toast(`删除失败：${error.message}`)}}
 async function openReader(id){
