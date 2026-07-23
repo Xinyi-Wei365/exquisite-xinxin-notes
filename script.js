@@ -77,8 +77,8 @@ function bindEvents(){
   window.addEventListener("beforeunload",()=>objectUrls.forEach(URL.revokeObjectURL));
 }
 
-  $("#notesGrid").addEventListener("change",e=>{const inp=e.target.closest(".photo-date-input");if(!inp)return;e.stopPropagation();const id=inp.dataset.id;const note=notes.find(n=>n.id===id);if(note){note.recordDate=inp.value;persist(note,false);renderNotes();toast("拍摄日期已更新")}});
-  $("#notesGrid").addEventListener("click",e=>{const inp=e.target.closest(".photo-date-input");if(inp)return;const card=e.target.closest(".photo-item");if(card&&!e.target.closest("button"))openReader(card.dataset.id)});
+$("#notesGrid").addEventListener("change",function(e){var inp=e.target.closest(".photo-date-input");if(!inp)return;e.stopPropagation();var id=inp.dataset.id;var note=notes.find(function(n){return n.id===id});if(note){note.recordDate=inp.value;persist(note,false);renderNotes();toast("日期已更新")}});
+$("#notesGrid").addEventListener("click",function(e){if(e.target.closest(".photo-date-input"))return;var card=e.target.closest(".photo-item");if(card&&!e.target.closest("button"))openReader(card.dataset.id)});
 function closeMobile(){$("#sidebar").classList.remove("open");$("#mobileMenu").setAttribute("aria-expanded","false")}
 
 async function handleFiles(files){
@@ -102,7 +102,7 @@ async function persist(note,rerender=true){try{const saved=cloudMode?await Cloud
 async function migrateSpaces(){const changed=[];for(const note of notes){if(!note.space){note.space=note.category==="阅读"?"memory":["语言","编程"].includes(note.category)?"study":"life";changed.push(note)}}if(changed.length)await Promise.all(changed.map(note=>storeAction("put",note)))}
 function renderAll(){renderNotes();renderStats();renderSpaceCounts()}
 function filteredNotes(){const query=$("#searchInput").value.trim().toLowerCase();let list=notes.filter(n=>(activeSpace==="all"||n.space===activeSpace)&&(activeFilter==="all"||n.category===activeFilter)&&(activeView!=="favorites"||n.favorite)&&(!query||[n.title,n.summary,n.category,...(n.tags||[])].join(" ").toLowerCase().includes(query)));const sort=$("#sortSelect").value;return list.sort((a,b)=>sort==="oldest"?a.importedAt-b.importedAt:sort==="title"?a.title.localeCompare(b.title,"zh-CN"):b.importedAt-a.importedAt)}
-function renderNotes(){const list=filteredNotes();$("#noteCount").textContent=String(list.length).padStart(2,"0");$("#notesGrid").innerHTML=list.map((n,i)=>noteCard(n,i)).join("");$("#emptyState").hidden=!!list.length}
+function renderNotes(){const list=filteredNotes();$("#noteCount").textContent=String(list.length).padStart(2,"0");const im=activeSpace==="memory";$("#notesGrid").className="notes-grid"+(im?" photo-album":"");$("#notesGrid").innerHTML=im?list.map((n,i)=>photoItem(n,i)).join(""):list.map((n,i)=>noteCard(n,i)).join("");$("#emptyState").hidden=!!list.length;loadCloudThumbnails()}
 function noteCard(n,i){let cover;if(n.type==="图片"&&n.fileBlob){const url=URL.createObjectURL(n.fileBlob);objectUrls.add(url);cover=`<div class="note-cover image"><img src="${url}" alt="${escapeHtml(n.title)} 的预览"></div>`}else if(n.type==="视频"&&n.fileBlob){const url=URL.createObjectURL(n.fileBlob);objectUrls.add(url);cover=`<div class="note-cover video"><video src="${url}" muted preload="metadata"></video><span class="play-mark">▶</span></div>`}else if(n.type==="PDF")cover=`<div class="note-cover pdf"><div class="pdf-sheet">${"<i></i>".repeat(6)}</div></div>`;else cover=`<div class="note-cover text">“${escapeHtml((n.content||n.summary).replace(/[#>*_`]/g,"").slice(0,90))}”</div>`;const dateBadge=n.space==="memory"&&["图片","视频"].includes(n.type)&&n.recordDate?`<span class="record-date">${displayRecordDate(n.recordDate)}</span>`:"";return `<article class="note-card" data-id="${n.id}" style="animation-delay:${Math.min(i,8)*45}ms"><span class="cover-label">${escapeHtml(n.category)} · ${escapeHtml(n.type)}</span>${dateBadge}${cover}<div class="note-body"><div class="note-meta"><span>${n.recordDate?displayRecordDate(n.recordDate):formatDate(n.importedAt)}</span><span>${n.isExample?"示例手记":"本地手记"}</span></div><h3>${escapeHtml(n.title)}</h3><p>${escapeHtml(n.summary||"还没有添加简介")}</p><div class="tags">${(n.tags||[]).map(t=>`<span class="tag"># ${escapeHtml(t)}</span>`).join("")}</div><div class="card-actions"><span class="read-progress"><i style="--progress:${n.progress||0}%"></i>${n.progress||0}%</span><span class="icon-actions"><button data-action="favorite" class="${n.favorite?"faved":""}" aria-label="收藏">${n.favorite?"♥":"♡"}</button><button data-action="delete" aria-label="删除">⌫</button></span></div></div></article>`}
 function renderStats(){animateNumber($("#statTotal"),notes.length);animateNumber($("#statStudy"),notes.filter(n=>n.space==="study").length);animateNumber($("#statMemory"),notes.filter(n=>n.space==="memory").length);animateNumber($("#statLife"),notes.filter(n=>n.space==="life").length)}
 function animateNumber(el,target){const start=Number(el.textContent)||0;let frame=0;const tick=()=>{frame++;el.textContent=Math.round(start+(target-start)*frame/18);if(frame<18)requestAnimationFrame(tick)};tick()}
@@ -127,7 +127,7 @@ async function saveEditor(e){e.preventDefault();if(!$("#editTitle").value.trim()
 function toast(message){const el=document.createElement("div");el.className="toast";el.textContent=message;$("#toastStack").append(el);setTimeout(()=>el.remove(),3200)}
 
 // Cloud mode overrides keep the original offline experience available for local previews.
-function renderNotes(){const list=filteredNotes();$("#noteCount").textContent=String(list.length).padStart(2,"0");const isMemory=activeSpace==="memory";$("#notesGrid").className='notes-grid'+(isMemory?" photo-album":"");$("#notesGrid").innerHTML=isMemory?list.map((n,i)=>timelineItem(n,i)).join(""):list.map((n,i)=>noteCard(n,i)).join("");$("#emptyState").hidden=!!list.length;loadCloudThumbnails()}
+function renderNotes(){const list=filteredNotes();$("#noteCount").textContent=String(list.length).padStart(2,"0");const im=activeSpace==="memory";$("#notesGrid").className="notes-grid"+(im?" photo-album":"");$("#notesGrid").innerHTML=im?list.map((n,i)=>photoItem(n,i)).join(""):list.map((n,i)=>noteCard(n,i)).join("");$("#emptyState").hidden=!!list.length;loadCloudThumbnails()}
 function noteCard(n,i){
   let cover;
   if(n.type==="图片"&&n.fileBlob){const url=URL.createObjectURL(n.fileBlob);objectUrls.add(url);cover=`<div class="note-cover image"><img src="${url}" alt="${escapeHtml(n.title)} 的预览"></div>`}
@@ -141,17 +141,16 @@ function noteCard(n,i){
   return `<article class="note-card" data-id="${n.id}" style="animation-delay:${Math.min(i,8)*45}ms"><span class="cover-label">${escapeHtml(n.category)} · ${escapeHtml(n.type)}</span>${dateBadge}${cover}<div class="note-body"><div class="note-meta"><span>${n.recordDate?displayRecordDate(n.recordDate):formatDate(n.importedAt)}</span><span>${n.cloud?"云端手记":"本地手记"}</span></div><h3>${escapeHtml(n.title)}</h3><p>${escapeHtml(n.summary||"还没有添加简介")}</p><div class="tags">${(n.tags||[]).map(t=>`<span class="tag"># ${escapeHtml(t)}</span>`).join("")}</div><div class="card-actions"><span class="read-progress"><i style="--progress:${n.progress||0}%"></i>${n.progress||0}%</span>${actions}</div></div></article>`;
 }
 async function loadCloudThumbnails(){if(!cloudMode)return;for(const el of $$('[data-cloud-image]')){try{const url=await CloudApp.mediaUrl(el.dataset.cloudImage);el.innerHTML=`<img src="${url}" alt="云端照片" draggable="false">`}catch{el.textContent="照片暂时无法载入"}}
-function timelineItem(n,i){
-  let imgSrc='';
-  if(n.type==="图片"&&n.fileBlob){const url=URL.createObjectURL(n.fileBlob);objectUrls.add(url);imgSrc=url}
-  else if(n.cloud&&n.objectKey&&n.type==="图片"){const imgId='tl-img-'+n.id;setTimeout(async()=>{try{const el=document.getElementById(imgId);if(el){const url=await CloudApp.mediaUrl(n.id);el.innerHTML='<img src="'+url+'" alt="'+escapeHtml(n.title)+'" draggable="false" loading="lazy">'}}catch(e){}},100);imgSrc=''}
-  const dateStr=n.recordDate?displayRecordDate(n.recordDate):formatDate(n.importedAt);
-  const rawDate=n.recordDate||(n.importedAt?inputDate(n.importedAt):'');
-  const actions=!cloudMode||CloudApp.isAdmin?'<span class="icon-actions"><button data-action="favorite" class="'+(n.favorite?"faved":"")+'" aria-label="收藏">'+(n.favorite?"\u2665":"\u2661")+'</button><button data-action="delete" aria-label="删除">\u232b</button></span>':'';
-  if(imgSrc){
-    return '<article class="photo-item" data-id="'+n.id+'" style="animation-delay:'+Math.min(i,8)*60+'ms"><div class="photo-date-row"><span class="photo-dot"></span><input type="date" class="photo-date-input" value="'+rawDate+'" data-id="'+n.id+'" title="点击修改拍摄日期"> <span class="photo-label">'+escapeHtml(n.category)+'</span>'+actions+'</div><div class="photo-card"><div class="photo-frame"><img src="'+imgSrc+'" alt="'+escapeHtml(n.title)+'" loading="lazy"></div><div class="photo-caption"><strong>'+escapeHtml(n.title)+'</strong><span>'+escapeHtml(n.summary||"")+'</span></div></div></article>';
-  }
-  return '<article class="photo-item photo-text" data-id="'+n.id+'" style="animation-delay:'+Math.min(i,8)*60+'ms"><div class="photo-date-row"><span class="photo-dot"></span><input type="date" class="photo-date-input" value="'+rawDate+'" data-id="'+n.id+'" title="点击修改拍摄日期"> <span class="photo-label">'+escapeHtml(n.category)+'</span>'+actions+'</div><div class="photo-card"><div class="photo-caption"><strong>'+escapeHtml(n.title)+'</strong><span>'+escapeHtml(n.summary||"")+'</span></div></div></article>';
+function photoItem(n,i){
+  var s="",v=n.fileBlob?URL.createObjectURL(n.fileBlob):"";
+  if(v)objectUrls.add(v);
+  if(!v&&n.cloud&&n.objectKey&&n.type==="图片"){var pid="pi-"+n.id;setTimeout(async function(){try{var el=document.getElementById(pid);if(el){var u=await CloudApp.mediaUrl(n.id);el.innerHTML='<img src="'+u+'" alt="'+escapeHtml(n.title)+'" loading="lazy">'}}catch(e){}},100);s='<span id="'+pid+'" class="pi-load">载入中…</span>'}
+  else if(v)s='<img src="'+v+'" alt="'+escapeHtml(n.title)+'" loading="lazy">';
+  var ds=n.recordDate?displayRecordDate(n.recordDate):formatDate(n.importedAt);
+  var rd=n.recordDate||(n.importedAt?inputDate(n.importedAt):"");
+  var ac=!cloudMode||CloudApp.isAdmin?'<span class="icon-actions"><button data-action="favorite" class="'+(n.favorite?"faved":"")+'" aria-label="收藏">'+(n.favorite?"♥":"♡")+'</button><button data-action="delete" aria-label="删除">⌫</button></span>':"";
+  return '<article class="photo-item" data-id="'+n.id+'" style="animation-delay:'+Math.min(i,8)*60+'ms"><div class="photo-date-row"><span class="photo-dot"></span><input type="date" class="photo-date-input" value="'+rd+'" data-id="'+n.id+'" title="点击修改拍摄日期"> <span class="photo-label">'+escapeHtml(n.category)+'</span>'+ac+'</div><div class="photo-card">'+(s?'<div class="photo-frame">'+s+'</div>':"")+'<div class="photo-caption"><strong>'+escapeHtml(n.title)+'</strong><span>'+escapeHtml(n.summary||"")+'</span></div></div></article>';
+}
 }
 async function deleteNote(id){const note=notes.find(n=>n.id===id);if(!note||!confirm(`确定删除「${note.title}」吗？此操作无法撤销。`))return;try{if(cloudMode)await CloudApp.deleteNote(id);else if(db)await storeAction("delete",id);notes=notes.filter(n=>n.id!==id);renderAll();toast("手记已删除")}catch(error){toast(`删除失败：${error.message}`)}}
 async function openReader(id){
@@ -164,14 +163,7 @@ async function openReader(id){
   else content.innerHTML=`<pre>${escapeHtml(currentNote.content||currentNote.summary)}</pre>`;
   $("#readerDialog").showModal();
 }
-async function openSettings(){
-  if(!CloudApp.isAdmin)return;
-  const account=CloudApp.user;
-  $("#accountEmail").textContent=account?.email||"未知邮箱";
-  $("#accountRole").textContent=account?.role==="admin"?"管理员":"访客";
-  $("#settingsDialog").showModal();
-  await Promise.all([renderInvites(),inspectMigration()]);
-}
+async function openSettings(){if(!CloudApp.isAdmin)return;$("#settingsDialog").showModal();await Promise.all([renderInvites(),inspectMigration()])}
 async function renderInvites(){try{const rows=await CloudApp.listInvites();$("#inviteList").innerHTML=rows.map(row=>`<div class="invite-row"><span><b>${escapeHtml(row.email)}</b><small>${row.role} · ${row.status}</small></span>${row.role==="admin"?"":`<button data-revoke="${escapeHtml(row.email)}">撤销</button>`}</div>`).join("");$$('[data-revoke]').forEach(btn=>btn.onclick=async()=>{await CloudApp.revoke(btn.dataset.revoke);renderInvites()})}catch(error){toast(error.message)}}
 async function inviteViewer(e){e.preventDefault();try{await CloudApp.invite($("#inviteEmail").value.trim());$("#inviteEmail").value="";await renderInvites();toast("访客已加入邀请名单")}catch(error){toast(error.message)}}
 async function readLocalNotes(){if(!db)await openDB();return storeAction("get")}
