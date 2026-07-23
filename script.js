@@ -70,7 +70,7 @@ function bindEvents(){
   $("#spacePickerDialog").onclick=e=>{const button=e.target.closest("[data-pick-space]");if(button)resolveSpacePick(button.dataset.pickSpace)};$("#skipPendingFile").onclick=()=>resolveSpacePick(null);
   $("#spacePickerDialog").addEventListener("cancel",e=>{e.preventDefault();resolveSpacePick(null)});
   $$(".nav-item[data-view]").forEach(btn=>btn.onclick=()=>{activeView=btn.dataset.view;$$(".nav-item").forEach(b=>b.classList.toggle("active",b===btn));renderNotes();closeMobile()});
-  $("#notesGrid").onclick=handleCardAction; $("#closeReader").onclick=()=>$("#readerDialog").close(); $("#readerFav").onclick=()=>currentNote&&toggleFavorite(currentNote.id,true); $("#editNote").onclick=openEditor;
+  $("#notesGrid").onclick=handleCardAction; $("#notesGrid").onchange=saveAlbumDate; $("#closeReader").onclick=()=>$("#readerDialog").close(); $("#readerFav").onclick=()=>currentNote&&toggleFavorite(currentNote.id,true); $("#editNote").onclick=openEditor;
   $("#readerContent").onscroll=e=>{if(!currentNote)return;const el=e.currentTarget;const progress=Math.min(100,Math.round(el.scrollTop/Math.max(1,el.scrollHeight-el.clientHeight)*100));$("#readerProgressBar").style.width=`${progress}%`;if(progress>currentNote.progress){currentNote.progress=progress;persist(currentNote,false)}};
   $("#editorForm").onsubmit=e=>e.preventDefault();$("#saveEdit").onclick=saveEditor;
   $("#mobileMenu").onclick=()=>{const open=$("#sidebar").classList.toggle("open");$("#mobileMenu").setAttribute("aria-expanded",open)};$("#themeButton").onclick=()=>{document.body.classList.toggle("dim");$("#themeButton").textContent=document.body.classList.contains("dim")?"☾":"☀"};
@@ -106,7 +106,7 @@ function animateNumber(el,target){const start=Number(el.textContent)||0;let fram
 function renderSpaceCounts(){for(const [space,label] of [["study","Study"],["memory","Memory"],["life","Life"]]){$(`#space${label}Count`).textContent=notes.filter(n=>n.space===space).length}}
 function enterSpace(space){if(activeSpace===space)return;activeSpace=space;const grid=$("#spaceGrid");grid.classList.add("switching");setTimeout(()=>{grid.classList.toggle("focused",space!=="all");$$('.space-card').forEach(c=>c.classList.toggle("selected",c.dataset.space===space));$("#showAllSpaces").hidden=space==="all";const names={study:"研习间",memory:"拾光集",life:"日常里"};$(".notes-heading h2").firstChild.textContent=space==="all"?"最近的手记 ":`${names[space]}的手记 `;renderNotes();grid.classList.remove("switching");if(space!=="all")$("#notesSection").scrollIntoView({behavior:"smooth",block:"start"})},220)}
 
-function handleCardAction(e){const card=e.target.closest(".note-card")||e.target.closest(".timeline-item");if(!card)return;const action=e.target.closest("button")?.dataset.action;if(action==="favorite"){e.stopPropagation();toggleFavorite(card.dataset.id);return}if(action==="delete"){e.stopPropagation();deleteNote(card.dataset.id);return}openReader(card.dataset.id)}
+function handleCardAction(e){const card=e.target.closest(".note-card")||e.target.closest(".timeline-item")||e.target.closest(".album-photo");if(!card)return;const action=e.target.closest("button")?.dataset.action;if(action==="edit-date"){e.stopPropagation();card.classList.toggle("editing");return}if(action==="favorite"){e.stopPropagation();toggleFavorite(card.dataset.id);return}if(action==="delete"){e.stopPropagation();deleteNote(card.dataset.id);return}if(e.target.closest(".photo-date-input")){e.stopPropagation();return}openReader(card.dataset.id)}
 async function toggleFavorite(id,fromReader=false){const note=notes.find(n=>n.id===id);if(!note)return;note.favorite=!note.favorite;await persist(note);if(fromReader)$("#readerFav").textContent=note.favorite?"♥":"♡";toast(note.favorite?"已放进灵感收藏夹":"已取消收藏")}
 async function deleteNote(id){const note=notes.find(n=>n.id===id);if(!note||!confirm(`确定删除「${note.title}」吗？此操作无法撤销。`))return;notes=notes.filter(n=>n.id!==id);if(db)await storeAction("delete",id);renderAll();toast("手记已删除")}
 
@@ -124,7 +124,55 @@ async function saveEditor(e){e.preventDefault();if(!$("#editTitle").value.trim()
 function toast(message){const el=document.createElement("div");el.className="toast";el.textContent=message;$("#toastStack").append(el);setTimeout(()=>el.remove(),3200)}
 
 // Cloud mode overrides keep the original offline experience available for local previews.
-function renderNotes(){const list=filteredNotes();$("#noteCount").textContent=String(list.length).padStart(2,"0");const isMemory=activeSpace==="memory";$("#notesGrid").className='notes-grid'+(isMemory?" timeline-mode":"");$("#notesGrid").innerHTML=isMemory?list.map((n,i)=>timelineItem(n,i)).join(""):list.map((n,i)=>noteCard(n,i)).join("");$("#emptyState").hidden=!!list.length;loadCloudThumbnails()}
+function renderNotes(){
+  const list=filteredNotes();
+  $("#noteCount").textContent=String(list.length).padStart(2,"0");
+  const isMemory=activeSpace==="memory";
+  if(isMemory){
+    const photos=list.filter(n => n.space === "memory" && n.type === "图片");
+    const otherNotes=list.filter(n => !(n.space === "memory" && n.type === "图片"));
+    $("#notesGrid").className="notes-grid memory-album-mode";
+    $("#notesGrid").innerHTML=renderMemoryTimeline(photos)+(otherNotes.length?`<section class="memory-other-notes">${otherNotes.map((n,i)=>noteCard(n,i)).join("")}</section>`:"");
+  }else{
+    $("#notesGrid").className="notes-grid";
+    $("#notesGrid").innerHTML=list.map((n,i)=>noteCard(n,i)).join("");
+  }
+  $("#emptyState").hidden=!!list.length;
+  loadCloudThumbnails();
+}
+
+function renderMemoryTimeline(images){
+  if(!images.length)return "";
+  const groups=new Map();
+  images.forEach(note=>{
+    const date=note.recordDate||inputDate(note.importedAt||note.createdAt);
+    if(!groups.has(date))groups.set(date,[]);
+    groups.get(date).push(note);
+  });
+  return `<section class="photo-timeline">${[...groups.entries()].sort(([a],[b])=>b.localeCompare(a)).map(([date,items])=>`<article class="timeline-day"><header class="timeline-day-label"><strong>${displayRecordDate(date)}</strong><small>${items.length} 张照片</small></header><div class="timeline-photo-wall">${items.map((note,index)=>albumPhoto(note,index)).join("")}</div></article>`).join("")}</section>`;
+}
+
+function albumPhoto(note,index){
+  let media="";
+  if(note.fileBlob){const url=URL.createObjectURL(note.fileBlob);objectUrls.add(url);media=`<img src="${url}" alt="${escapeHtml(note.title)}" draggable="false">`;}
+  else if(note.cloud&&note.objectKey)media=`<span class="cloud-album-media" data-cloud-image="${note.id}">正在载入照片…</span>`;
+  else media=`<span class="cloud-album-media">照片暂时无法载入</span>`;
+  const canEdit=!cloudMode||CloudApp.isAdmin;
+  const edit=canEdit?`<button class="album-date-button" data-action="edit-date" aria-label="修改 ${escapeHtml(note.title)} 的日期">✎</button><input class="photo-date-input" data-id="${note.id}" type="date" value="${note.recordDate||inputDate(note.importedAt)}">`:"";
+  return `<article class="album-photo" data-id="${note.id}" style="animation-delay:${Math.min(index,8)*45}ms">${media}${edit}<span class="album-caption">${escapeHtml(note.title)}</span></article>`;
+}
+
+async function saveAlbumDate(e){
+  const input=e.target.closest(".photo-date-input");
+  if(!input?.value)return;
+  e.stopPropagation();
+  const note=notes.find(n=>n.id===input.dataset.id);
+  if(!note)return;
+  note.recordDate=input.value;
+  await persist(note,false);
+  renderNotes();
+  toast("日期已更新");
+}
 function noteCard(n,i){
   let cover;
   if(n.type==="图片"&&n.fileBlob){const url=URL.createObjectURL(n.fileBlob);objectUrls.add(url);cover=`<div class="note-cover image"><img src="${url}" alt="${escapeHtml(n.title)} 的预览"></div>`}
