@@ -40,3 +40,9 @@ test("memory photo cards expose an admin-only delete action", () => {
   assert.match(script, /data-action="delete"/);
   assert.match(css, /\.album-delete-button/);
 });
+
+test("admin can right-click an album photo to delete it", () => {
+  assert.match(script, /handleAlbumContextMenu/);
+  assert.match(script, /contextmenu/);
+  assert.match(script, /deleteNote\(card\.dataset\.id\)/);
+});
