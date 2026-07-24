@@ -175,7 +175,7 @@ function albumPhoto(note,index){
   else if(note.cloud&&note.objectKey)media=`<span class="cloud-album-media" data-cloud-image="${note.id}">正在载入照片…</span>`;
   else media=`<span class="cloud-album-media">照片暂时无法载入</span>`;
   const canEdit=!cloudMode||CloudApp.isAdmin;
-  const edit=canEdit?`<button class="album-date-button" data-action="edit-date" aria-label="修改 ${escapeHtml(note.title)} 的日期">✎</button><input class="photo-date-input" data-id="${note.id}" type="date" value="${note.recordDate||inputDate(note.importedAt)}">`:"";
+  const edit=canEdit?`<span class="album-actions"><button class="album-date-button" data-action="edit-date" aria-label="修改 ${escapeHtml(note.title)} 的日期">✎</button><button class="album-delete-button" data-action="delete" aria-label="删除 ${escapeHtml(note.title)}">×</button></span><input class="photo-date-input" data-id="${note.id}" type="date" value="${note.recordDate||inputDate(note.importedAt)}">`:"";
   return `<article class="album-photo" data-id="${note.id}" style="animation-delay:${Math.min(index,8)*45}ms">${media}${edit}<span class="album-caption">${escapeHtml(note.title)}</span></article>`;
 }
 

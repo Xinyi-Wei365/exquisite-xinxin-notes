@@ -34,3 +34,9 @@ test("batch import exposes a shared-space picker and upload progress panel", () 
   assert.match(script, /CloudApp\.upload\(file, progress/);
   assert.match(css, /\.upload-progress/);
 });
+
+test("memory photo cards expose an admin-only delete action", () => {
+  assert.match(script, /album-delete-button/);
+  assert.match(script, /data-action="delete"/);
+  assert.match(css, /\.album-delete-button/);
+});
