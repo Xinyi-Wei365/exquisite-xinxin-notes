@@ -25,3 +25,12 @@ test("memory photos render as dated timeline groups with inline date edits", () 
   assert.match(css, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(css, /@media\(max-width:760px\).*timeline-photo-wall/s);
 });
+
+test("batch import exposes a shared-space picker and upload progress panel", () => {
+  assert.match(html, /id="uploadProgress"/);
+  assert.match(html, /id="uploadOverallBar"/);
+  assert.match(script, /askForBatchSpace/);
+  assert.match(script, /setUploadProgress/);
+  assert.match(script, /CloudApp\.upload\(file, progress/);
+  assert.match(css, /\.upload-progress/);
+});

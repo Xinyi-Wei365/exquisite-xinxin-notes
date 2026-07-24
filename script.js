@@ -79,20 +79,37 @@ function bindEvents(){
 function closeMobile(){$("#sidebar").classList.remove("open");$("#mobileMenu").setAttribute("aria-expanded","false")}
 
 async function handleFiles(files){
-  if(!files.length)return; let imported=0;
-  pendingFiles=files;for(let fileIndex=0;fileIndex<files.length;fileIndex++){const file=files[fileIndex];
+  if(!files.length)return;
+  const validFiles=files.filter(file=>{
     const ext=file.name.split(".").pop().toLowerCase();
-    if(!supported[ext]){toast(`${file.name}：暂不支持这种格式`);continue}
-    if(file.size===0){toast(`${file.name}：文件内容为空`);continue}
-    if(file.size>MAX_FILE_SIZE&&!confirm(`${file.name} 超过 50MB，导入可能占用较多空间。仍要继续吗？`))continue;
-    const duplicate=notes.some(n=>n.fileName===file.name&&n.fileSize===file.size&&n.lastModified===file.lastModified);if(duplicate){toast(`${file.name} 已经导入过啦`);continue}
-    try{const space=await askForSpace(file,fileIndex,files.length);if(!space)continue;const note=await fileToNote(file,ext,space);if(cloudMode){if(note.fileBlob){toast(`正在上传 ${file.name}…`);note.objectKey=await CloudApp.upload(file);note.mimeType=file.type}notes.unshift(await CloudApp.createNote(note))}else{notes.unshift(note);await persist(note,false)}imported++}catch(error){console.error(error);toast(`${file.name} 导入失败：${error.message}`)}
+    const duplicate=notes.some(n=>n.fileName===file.name&&n.fileSize===file.size&&n.lastModified===file.lastModified);
+    if(!supported[ext]||file.size===0||duplicate){toast(`${file.name} 无法导入：格式、内容或重复文件不符合要求`);return false}
+    return true;
+  });
+  if(!validFiles.length){$("#fileInput").value="";return}
+  const space=await askForBatchSpace(validFiles);
+  if(!space){$("#fileInput").value="";return}
+  let imported=0;let failed=0;
+  showUploadProgress(validFiles.length);
+  pendingFiles=validFiles;
+  for(let fileIndex=0;fileIndex<validFiles.length;fileIndex++){
+    const file=validFiles[fileIndex];const ext=file.name.split(".").pop().toLowerCase();
+    if(file.size>MAX_FILE_SIZE&&!confirm(`${file.name} 超过 50MB，仍要继续吗？`))continue;
+    try{
+      setUploadProgress(fileIndex,validFiles.length,file.name,0);
+      const note=await fileToNote(file,ext,space);
+      if(cloudMode){if(note.fileBlob){note.objectKey=await CloudApp.upload(file, progress=>setUploadProgress(fileIndex,validFiles.length,file.name,progress));note.mimeType=file.type}notes.unshift(await CloudApp.createNote(note))}
+      else{notes.unshift(note);await persist(note,false)}
+      imported++;setUploadProgress(fileIndex,validFiles.length,file.name,100);
+    }catch(error){failed++;console.error(error);setUploadProgress(fileIndex,validFiles.length,file.name,0,`上传失败：${error.message}`);toast(`${file.name} 导入失败：${error.message}`)}
   }
-  $("#fileInput").value="";renderAll();if(imported)toast(`成功收好 ${imported} 份新手记 ♡`);
+  $("#fileInput").value="";renderAll();finishUploadProgress(imported,failed);if(imported)toast(`成功收好 ${imported} 份新手记 ♡`);
 }
-function askForSpace(file,index,total){$("#pendingFileIndex").textContent=`${index+1} / ${total}`;$("#pendingFileName").textContent=file.name;$("#pendingFileType").textContent=`${supported[file.name.split(".").pop().toLowerCase()]} · ${(file.size/1024/1024).toFixed(2)} MB`;$("#spacePickerDialog").showModal();return new Promise(resolve=>pendingResolver=resolve)}
+function askForBatchSpace(files){$("#spacePickerTitle").textContent=`这 ${files.length} 份手记放在哪里？`;$("#pendingFileIndex").textContent=`${files.length} 份`;$("#pendingFileName").textContent=files.length===1?files[0].name:`${files[0].name} 等 ${files.length} 个文件`;$("#pendingFileType").textContent=`所有文件会放入同一个空间 · ${(files.reduce((total,file)=>total+file.size,0)/1024/1024).toFixed(2)} MB`;$("#skipPendingFile").textContent="取消这次导入";$("#spacePickerDialog").showModal();return new Promise(resolve=>pendingResolver=resolve)}
 function resolveSpacePick(space){$("#spacePickerDialog").close();const resolve=pendingResolver;pendingResolver=null;resolve?.(space)}
-async function fileToNote(file,ext,space){const isText=["txt","md","markdown"].includes(ext);const content=isText?await file.text():"";const category=guessCategory(file.name,content);return{id:uid(),title:file.name.replace(/\.[^.]+$/,"").slice(0,80),type:supported[ext],category,space,recordDate:inputDate(file.lastModified||Date.now()),tags:[category,"手记导入"],summary:isText?content.replace(/[#>*_`\[\]-]/g," ").replace(/\s+/g," ").trim().slice(0,100):`${supported[ext]} 手记 · ${(file.size/1024/1024).toFixed(1)} MB`,content,fileBlob:isText?null:file,fileName:file.name,fileSize:file.size,lastModified:file.lastModified,importedAt:Date.now(),createdAt:file.lastModified||Date.now(),favorite:false,progress:0,isExample:false}}
+function showUploadProgress(total){const panel=$("#uploadProgress");panel.hidden=false;panel.classList.remove("finished");$("#uploadProgressCount").textContent=`0 / ${total} 个文件`;$("#uploadProgressName").textContent="正在准备上传…";$("#uploadProgressPercent").textContent="0%";$("#uploadOverallBar").style.width="0%";$("#uploadFileBar").style.width="0%";$("#uploadProgressStatus").textContent="文件会按顺序安全上传"}
+function setUploadProgress(index,total,name,filePercent,status){const overall=Math.round((index+filePercent/100)/total*100);$("#uploadProgressCount").textContent=`${index+1} / ${total} 个文件`;$("#uploadProgressName").textContent=name;$("#uploadProgressPercent").textContent=`${overall}%`;$("#uploadOverallBar").style.width=`${overall}%`;$("#uploadFileBar").style.width=`${filePercent}%`;$("#uploadProgressStatus").textContent=status||`${filePercent}% · 正在上传`}
+function finishUploadProgress(imported,failed){const panel=$("#uploadProgress");panel.classList.add("finished");$("#uploadProgressCount").textContent=`已完成 ${imported} 份${failed?` · ${failed} 份失败`:""}`;$("#uploadProgressName").textContent=failed?"部分文件未成功导入":"所有文件已安全收好";$("#uploadProgressStatus").textContent=failed?"失败文件可以重新选择后再试":"可以继续添加更多手记";$("#uploadOverallBar").style.width="100%";setTimeout(()=>{panel.hidden=true},failed?7000:3200)}async function fileToNote(file,ext,space){const isText=["txt","md","markdown"].includes(ext);const content=isText?await file.text():"";const category=guessCategory(file.name,content);return{id:uid(),title:file.name.replace(/\.[^.]+$/,"").slice(0,80),type:supported[ext],category,space,recordDate:inputDate(file.lastModified||Date.now()),tags:[category,"手记导入"],summary:isText?content.replace(/[#>*_`\[\]-]/g," ").replace(/\s+/g," ").trim().slice(0,100):`${supported[ext]} 手记 · ${(file.size/1024/1024).toFixed(1)} MB`,content,fileBlob:isText?null:file,fileName:file.name,fileSize:file.size,lastModified:file.lastModified,importedAt:Date.now(),createdAt:file.lastModified||Date.now(),favorite:false,progress:0,isExample:false}}
 function guessCategory(name,content){const text=(name+" "+content.slice(0,300)).toLowerCase();if(/日语|英语|单词|english|japanese|language/.test(text))return"语言";if(/代码|编程|javascript|python|css|html|code/.test(text))return"编程";if(/阅读|读书|书摘|reading|book/.test(text))return"阅读";return"灵感"}
 async function persist(note,rerender=true){try{const saved=cloudMode?await CloudApp.updateNote(note):note;if(!cloudMode&&db)await storeAction("put",note);const i=notes.findIndex(n=>n.id===note.id);if(i>=0)notes[i]=saved;if(currentNote?.id===note.id)currentNote=saved;if(rerender)renderAll()}catch(error){toast(`保存失败：${error.message||"本地空间可能不足"}`)}}
 

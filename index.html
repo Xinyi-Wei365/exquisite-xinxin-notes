@@ -105,6 +105,12 @@
       <div><h3>把“手记”拖到这里</h3><p>支持 PDF、图片、MP4/WebM 视频、TXT 与 Markdown · 免费测试版单个文件最大 100MB</p></div>
       <button class="secondary" id="chooseFiles">选择文件</button>
     </section>
+    <section class="upload-progress" id="uploadProgress" aria-live="polite" hidden>
+      <div class="upload-progress-head"><div><small id="uploadProgressCount">准备上传</small><strong id="uploadProgressName">正在整理文件…</strong></div><b id="uploadProgressPercent">0%</b></div>
+      <div class="upload-progress-track"><i id="uploadOverallBar"></i></div>
+      <div class="upload-file-track"><i id="uploadFileBar"></i></div>
+      <p id="uploadProgressStatus">文件会按顺序安全上传</p>
+    </section>
 
     <section class="notes-section" id="notesSection">
       <div class="notes-heading">
@@ -142,7 +148,7 @@
 
   <dialog class="space-picker" id="spacePickerDialog">
     <div class="space-picker-shell">
-      <div class="modal-title"><div><small>CHOOSE A SPACE</small><h2>把这份手记放在哪里？</h2></div></div>
+      <div class="modal-title"><div><small>CHOOSE A SPACE</small><h2 id="spacePickerTitle">把这份手记放在哪里？</h2></div></div>
       <div class="pending-file"><span id="pendingFileIndex"></span><strong id="pendingFileName"></strong><small id="pendingFileType"></small></div>
       <div class="space-options">
         <button data-pick-space="study"><b>研习间</b><span>课程、语言与知识整理</span></button>
